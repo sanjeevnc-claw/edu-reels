@@ -76,9 +76,6 @@ export default function Home() {
                 </Link>
               </Button>
             </SignedIn>
-            <Button variant="outline">
-              Watch Demo
-            </Button>
           </div>
         </div>
 

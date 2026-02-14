@@ -19,6 +19,7 @@ import {
 } from '@/lib/shared';
 import type { Concept, AvatarMode, ReelStyle, CaptionStyle } from '@/lib/shared';
 import { Zap, ArrowLeft, ArrowRight, Check, Loader2, Sparkles } from 'lucide-react';
+import { useToast } from '@/components/ui/toast';
 
 type Step = 'concept' | 'voice' | 'avatar' | 'style' | 'preview';
 
@@ -47,6 +48,7 @@ export default function CreatePage() {
   const [script, setScript] = useState<GeneratedScript | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generationStatus, setGenerationStatus] = useState<string | null>(null);
+  const { showToast, ToastComponent } = useToast();
 
   const [concept, setConcept] = useState<Concept>({
     id: '', topic: '', targetAudience: '', keyPoints: [], tone: 'educational', duration: 60,
@@ -128,8 +130,7 @@ export default function CreatePage() {
       setTimeout(() => {
         setGenerating(false);
         setGenerationStatus(null);
-        // TODO: Navigate to video preview or download page
-        alert('🎬 Reel generated successfully!\n\nVideo generation pipeline coming soon. Your script has been created and saved.');
+        showToast('🎬 Reel generated! Video pipeline coming soon.', 'success');
       }, 1000);
 
     } catch (err) {
@@ -558,6 +559,9 @@ export default function CreatePage() {
           </Button>
         </div>
       </footer>
+
+      {/* Toast notifications */}
+      {ToastComponent}
     </div>
   );
 }

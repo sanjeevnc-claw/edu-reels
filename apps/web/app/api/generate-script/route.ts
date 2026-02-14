@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import OpenAI from 'openai';
+import { z } from 'zod';
+
+// Input validation schema
+const ConceptSchema = z.object({
+  topic: z.string().min(1, 'Topic is required').max(500, 'Topic too long'),
+  targetAudience: z.string().max(200).optional(),
+  duration: z.union([z.literal(15), z.literal(30), z.literal(60), z.literal(90)]).default(60),
+  tone: z.enum(['educational', 'casual', 'professional', 'entertaining']).default('educational'),
+  keyPoints: z.array(z.string()).max(5).optional(),
+});
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +21,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { concept } = await request.json();
+    // Parse and validate input
+    const body = await request.json();
+    const parseResult = ConceptSchema.safeParse(body.concept);
+    
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    
+    const concept = parseResult.data;
 
     // If no API key, return mock data for demo purposes
     if (!process.env.OPENAI_API_KEY) {
@@ -49,7 +70,7 @@ export async function POST(request: Request) {
         content: [],
         callToAction: '',
         fullScript: content,
-        estimatedDuration: concept.duration || 60,
+        estimatedDuration: concept.duration,
       },
     });
   } catch (error) {
@@ -112,7 +133,7 @@ PACING (for voiceover):
 
 Always output valid JSON. The fullScript should read naturally when spoken aloud - no stage directions, just pure spoken words.`;
 
-function generateMockScript(concept: { topic: string; duration: number; tone: string }) {
+function generateMockScript(concept: z.infer<typeof ConceptSchema>) {
   const topic = concept.topic || 'this amazing topic';
   const duration = concept.duration || 60;
   
@@ -140,13 +161,7 @@ Save this before it gets buried. Follow for part 2 where I show you exactly how 
   };
 }
 
-function buildPrompt(concept: {
-  topic: string;
-  duration: number;
-  tone: string;
-  targetAudience?: string;
-  keyPoints?: string[];
-}) {
+function buildPrompt(concept: z.infer<typeof ConceptSchema>) {
   const wordsPerSecond = 2.7;
   const targetWords = Math.floor(concept.duration * wordsPerSecond);
 
