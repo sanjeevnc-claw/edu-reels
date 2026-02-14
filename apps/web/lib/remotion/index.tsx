@@ -23,15 +23,16 @@ export const RemotionRoot: React.FC = () => {
     <>
       <Composition
         id="EduReel"
-        component={EduReelComposition}
+        component={EduReelComposition as unknown as React.ComponentType<Record<string, unknown>>}
         durationInFrames={30 * 60} // Max 60 seconds at 30fps
         fps={30}
         width={1080}
         height={1920}
-        defaultProps={defaultProps}
+        defaultProps={defaultProps as unknown as Record<string, unknown>}
         calculateMetadata={async ({ props }) => {
+          const duration = (props as unknown as EduReelProps).duration || 60;
           return {
-            durationInFrames: Math.ceil(props.duration * 30),
+            durationInFrames: Math.ceil(duration * 30),
           };
         }}
       />

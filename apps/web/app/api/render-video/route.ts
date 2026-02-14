@@ -68,8 +68,8 @@ export async function POST(request: Request) {
 
     // Try different rendering backends in order of preference
 
-    // 1. Remotion Lambda (AWS)
-    if (process.env.REMOTION_AWS_ACCESS_KEY_ID && process.env.REMOTION_FUNCTION_NAME) {
+    // 1. Remotion Lambda (via function URL)
+    if (process.env.REMOTION_LAMBDA_URL) {
       return await renderWithLambda(renderProps, userId);
     }
 
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
       status: 'demo',
       videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
       duration,
-      message: 'Video rendering requires one of: REMOTION_AWS_ACCESS_KEY_ID (Lambda), REMOTION_CLOUD_API_KEY (Cloud), or RENDER_SERVER_URL (self-hosted)',
+      message: 'Video rendering requires one of: REMOTION_LAMBDA_URL (Lambda), REMOTION_CLOUD_API_KEY (Cloud), or RENDER_SERVER_URL (self-hosted)',
       script: script.fullScript,
       wordTimestamps,
       renderProps, // Return props so they can be used elsewhere
@@ -102,24 +102,37 @@ export async function POST(request: Request) {
   }
 }
 
-// Remotion Lambda rendering
+// Remotion Lambda rendering via AWS Lambda invoke (no SDK dependency)
 async function renderWithLambda(props: any, userId: string) {
-  // Dynamic import to avoid bundling issues
-  const { renderMediaOnLambda } = await import('@remotion/lambda/client');
+  // Use fetch to invoke Lambda directly via function URL or API Gateway
+  const lambdaUrl = process.env.REMOTION_LAMBDA_URL;
+  if (!lambdaUrl) {
+    throw new Error('REMOTION_LAMBDA_URL not configured');
+  }
 
-  const result = await renderMediaOnLambda({
-    region: process.env.REMOTION_AWS_REGION as any || 'us-east-1',
-    functionName: process.env.REMOTION_FUNCTION_NAME!,
-    serveUrl: process.env.REMOTION_SERVE_URL!,
-    composition: 'EduReel',
-    codec: 'h264',
-    inputProps: props,
-    outName: `reel-${userId}-${Date.now()}.mp4`,
+  const response = await fetch(lambdaUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Api-Key': process.env.REMOTION_LAMBDA_API_KEY || '',
+    },
+    body: JSON.stringify({
+      composition: 'SimpleReel',
+      inputProps: props,
+      codec: 'h264',
+      outName: `reel-${userId}-${Date.now()}.mp4`,
+    }),
   });
+
+  if (!response.ok) {
+    throw new Error(`Lambda render failed: ${response.statusText}`);
+  }
+
+  const result = await response.json();
 
   return NextResponse.json({
     status: 'completed',
-    videoUrl: result.outputFile,
+    videoUrl: result.outputFile || result.videoUrl,
     duration: props.duration,
   });
 }
@@ -133,7 +146,7 @@ async function renderWithCloud(props: any, userId: string) {
       'Authorization': `Bearer ${process.env.REMOTION_CLOUD_API_KEY}`,
     },
     body: JSON.stringify({
-      composition: 'EduReel',
+      composition: 'SimpleReel',
       inputProps: props,
       codec: 'h264',
       serveUrl: process.env.REMOTION_SERVE_URL,
@@ -162,7 +175,7 @@ async function renderWithServer(props: any, userId: string) {
       'Authorization': `Bearer ${process.env.RENDER_SERVER_SECRET || ''}`,
     },
     body: JSON.stringify({
-      composition: 'EduReel',
+      composition: 'SimpleReel',
       inputProps: props,
       userId,
     }),

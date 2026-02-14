@@ -1,5 +1,6 @@
 import { Composition, Folder } from 'remotion';
 import { EduReel } from './compositions/EduReel';
+import { SimpleReel, type SimpleReelProps } from './compositions/SimpleReel';
 import {
   VIDEO_FPS,
   VIDEO_WIDTH,
@@ -27,9 +28,32 @@ export const Root: React.FC = () => {
     updatedAt: new Date(),
   };
 
+  const defaultSimpleProps: SimpleReelProps = {
+    audioUrl: '',
+    wordTimestamps: [],
+    duration: 60,
+    captionStyle: 'tiktok_bounce',
+    primaryColor: '#0f0f23',
+    accentColor: '#00ff88',
+  };
+
   return (
     <>
-      {/* Main EduReel Composition */}
+      {/* SimpleReel - Primary composition for rendering */}
+      <Composition
+        id="SimpleReel"
+        component={SimpleReel}
+        durationInFrames={VIDEO_FPS * 60}
+        fps={VIDEO_FPS}
+        width={VIDEO_WIDTH}
+        height={VIDEO_HEIGHT}
+        defaultProps={defaultSimpleProps}
+        calculateMetadata={async ({ props }) => ({
+          durationInFrames: Math.ceil((props.duration || 60) * VIDEO_FPS),
+        })}
+      />
+
+      {/* Main EduReel Composition (full-featured) */}
       <Composition
         id="EduReel"
         component={EduReel}

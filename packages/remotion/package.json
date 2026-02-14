@@ -6,18 +6,26 @@
   "types": "./src/index.ts",
   "scripts": {
     "dev": "remotion studio",
-    "render": "remotion render",
+    "render": "remotion render SimpleReel",
+    "render:simple": "remotion render SimpleReel --props='{\"duration\":30}'",
+    "server": "npx tsx render-server.ts",
+    "bundle": "remotion bundle",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@remotion/player": "^4.0.0",
+    "@edu-reels/shared": "workspace:*",
+    "@remotion/bundler": "^4.0.0",
     "@remotion/cli": "^4.0.0",
+    "@remotion/player": "^4.0.0",
+    "@remotion/renderer": "^4.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "remotion": "^4.0.0"
   },
   "devDependencies": {
+    "@types/node": "^20.10.0",
     "@types/react": "^18.2.0",
+    "tsx": "^4.7.0",
     "typescript": "^5.3.0"
   }
 }
