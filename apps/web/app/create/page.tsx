@@ -54,7 +54,7 @@ export default function CreatePage() {
   });
   const [voiceId, setVoiceId] = useState(DEFAULT_VOICE_SETTINGS.voiceId);
   const [avatarMode, setAvatarMode] = useState<AvatarMode>('faceless');
-  const [avatarPosition, setAvatarPosition] = useState(DEFAULT_AVATAR_SETTINGS.position);
+  const [avatarPosition, setAvatarPosition] = useState<string>(DEFAULT_AVATAR_SETTINGS.position);
   const [visualStyle, setVisualStyle] = useState<ReelStyle>('modern_minimal');
   const [captionStyle, setCaptionStyle] = useState<CaptionStyle>('tiktok_bounce');
 
