@@ -16,8 +16,6 @@ import {
   Check,
   Clock,
   Volume2,
-  Menu,
-  X,
 } from 'lucide-react';
 import {
   REEL_DURATIONS,
@@ -31,21 +29,20 @@ import type { Concept, AvatarMode, ReelStyle, CaptionStyle } from '@/lib/shared'
 
 type Step = 'concept' | 'voice' | 'avatar' | 'style' | 'preview';
 
-const STEPS: { id: Step; title: string; icon: React.ElementType }[] = [
-  { id: 'concept', title: 'Concept', icon: Sparkles },
-  { id: 'voice', title: 'Voice', icon: Mic },
-  { id: 'avatar', title: 'Avatar', icon: User },
-  { id: 'style', title: 'Style', icon: Palette },
-  { id: 'preview', title: 'Preview', icon: Play },
+const STEPS: { id: Step; label: string; icon: React.ElementType }[] = [
+  { id: 'concept', label: 'Concept', icon: Sparkles },
+  { id: 'voice', label: 'Voice', icon: Mic },
+  { id: 'avatar', label: 'Avatar', icon: User },
+  { id: 'style', label: 'Style', icon: Palette },
+  { id: 'preview', label: 'Preview', icon: Play },
 ];
 
 export default function CreatePage() {
-  const [currentStep, setCurrentStep] = useState<Step>('concept');
-  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
-  const [generatedScript, setGeneratedScript] = useState<string | null>(null);
-  const [showMobileNav, setShowMobileNav] = useState(false);
+  const [step, setStep] = useState<Step>('concept');
+  const [loading, setLoading] = useState(false);
+  const [script, setScript] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Form state
   const [concept, setConcept] = useState<Concept>({
     id: '',
     topic: '',
@@ -60,671 +57,394 @@ export default function CreatePage() {
   const [visualStyle, setVisualStyle] = useState<ReelStyle>('modern_minimal');
   const [captionStyle, setCaptionStyle] = useState<CaptionStyle>('tiktok_bounce');
 
-  const stepIndex = STEPS.findIndex((s) => s.id === currentStep);
-  const progress = ((stepIndex + 1) / STEPS.length) * 100;
+  const stepIdx = STEPS.findIndex((s) => s.id === step);
+  const progress = ((stepIdx + 1) / STEPS.length) * 100;
 
-  const goNext = () => {
-    const nextIndex = stepIndex + 1;
-    if (nextIndex < STEPS.length) {
-      setCurrentStep(STEPS[nextIndex].id);
-    }
-  };
-
-  const goPrev = () => {
-    const prevIndex = stepIndex - 1;
-    if (prevIndex >= 0) {
-      setCurrentStep(STEPS[prevIndex].id);
-    }
-  };
+  const next = () => stepIdx < STEPS.length - 1 && setStep(STEPS[stepIdx + 1].id);
+  const prev = () => stepIdx > 0 && setStep(STEPS[stepIdx - 1].id);
 
   const generateScript = async () => {
-    setIsGeneratingScript(true);
+    if (!concept.topic.trim()) return;
+    setLoading(true);
+    setError(null);
     try {
       const res = await fetch('/api/generate-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ concept }),
       });
-      
-      if (res.ok) {
-        const data = await res.json();
-        setGeneratedScript(data.script.fullScript || JSON.stringify(data.script, null, 2));
+      const data = await res.json();
+      if (res.ok && data.script) {
+        setScript(data.script.fullScript || JSON.stringify(data.script, null, 2));
       } else {
-        setGeneratedScript('Failed to generate script. Please try again.');
+        setError(data.error || 'Failed to generate script');
       }
-    } catch (error) {
-      setGeneratedScript('Error generating script. Please try again.');
+    } catch (e) {
+      setError('Network error. Please try again.');
     }
-    setIsGeneratingScript(false);
+    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
-      {/* Mobile Header */}
-      <header className="lg:hidden sticky top-0 z-50 bg-slate-900/95 backdrop-blur border-b border-white/10">
-        <div className="flex items-center justify-between p-4">
+    <div className="min-h-screen bg-[#0f172a] text-white">
+      {/* Header */}
+      <header className="border-b border-white/10 bg-[#0f172a]/95 backdrop-blur sticky top-0 z-50">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <Zap className="w-5 h-5" />
             </div>
-            <span className="font-bold text-white">EduReels</span>
+            <span className="font-bold text-lg">EduReels</span>
           </Link>
-          <button
-            onClick={() => setShowMobileNav(!showMobileNav)}
-            className="p-2 text-white/70 hover:text-white"
-          >
-            {showMobileNav ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <div className="flex items-center gap-2 text-sm text-white/60">
+            <Clock className="w-4 h-4" />
+            <span>{concept.duration}s • ~{estimateWordCount(concept.duration || 60)} words</span>
+          </div>
         </div>
         
-        {/* Progress bar - mobile */}
-        <div className="px-4 pb-3">
-          <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="text-white/60">Progress</span>
-            <span className="text-purple-400 font-medium">{Math.round(progress)}%</span>
+        {/* Progress */}
+        <div className="max-w-5xl mx-auto px-4 pb-3">
+          <div className="flex items-center gap-2 mb-2">
+            {STEPS.map((s, i) => (
+              <button
+                key={s.id}
+                onClick={() => setStep(s.id)}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                  s.id === step
+                    ? 'bg-purple-500 text-white'
+                    : i < stepIdx
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'bg-white/5 text-white/40'
+                }`}
+              >
+                {i < stepIdx ? <Check className="w-3.5 h-3.5" /> : <s.icon className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{s.label}</span>
+              </button>
+            ))}
           </div>
-          <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
+              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
-
-        {/* Mobile step indicator */}
-        <div className="flex gap-1 px-4 pb-3 overflow-x-auto">
-          {STEPS.map((step, index) => {
-            const isActive = step.id === currentStep;
-            const isCompleted = index < stepIndex;
-            return (
-              <button
-                key={step.id}
-                onClick={() => {
-                  setCurrentStep(step.id);
-                  setShowMobileNav(false);
-                }}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  isActive
-                    ? 'bg-purple-500 text-white'
-                    : isCompleted
-                    ? 'bg-green-500/20 text-green-400'
-                    : 'bg-white/10 text-white/50'
-                }`}
-              >
-                {step.title}
-              </button>
-            );
-          })}
-        </div>
       </header>
 
-      {/* Mobile Nav Overlay */}
-      {showMobileNav && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-slate-900/95 pt-32 px-4">
-          <nav className="space-y-2">
-            {STEPS.map((step, index) => {
-              const isActive = step.id === currentStep;
-              const isCompleted = index < stepIndex;
-              const Icon = step.icon;
-              return (
-                <button
-                  key={step.id}
-                  onClick={() => {
-                    setCurrentStep(step.id);
-                    setShowMobileNav(false);
-                  }}
-                  className={`w-full text-left p-4 rounded-xl transition-all flex items-center gap-3 ${
-                    isActive
-                      ? 'bg-purple-500/20 text-purple-300'
-                      : isCompleted
-                      ? 'text-white/80 bg-white/5'
-                      : 'text-white/40 bg-white/5'
-                  }`}
-                >
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      isActive
-                        ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white'
-                        : isCompleted
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-white/10'
-                    }`}
-                  >
-                    {isCompleted ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
-                  </div>
-                  <span className="font-medium text-lg">{step.title}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      )}
+      {/* Content */}
+      <main className="max-w-2xl mx-auto px-4 py-8 pb-32">
+        {step === 'concept' && (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">What do you want to teach?</h1>
+              <p className="text-white/60">Enter your concept and AI will generate a viral-ready script.</p>
+            </div>
 
-      <div className="lg:flex">
-        {/* Desktop Sidebar */}
-        <aside className="hidden lg:flex w-72 border-r border-white/10 bg-slate-900/50 flex-col fixed h-screen">
-          <div className="p-4 border-b border-white/10">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Topic / Concept</label>
+                <input
+                  type="text"
+                  value={concept.topic}
+                  onChange={(e) => setConcept({ ...concept, topic: e.target.value })}
+                  placeholder="e.g., Why compound interest is the 8th wonder"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
               </div>
-              <span className="font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                EduReels
-              </span>
-            </Link>
-          </div>
 
-          {/* Progress */}
-          <div className="p-4 border-b border-white/10">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-white/60">Progress</span>
-              <span className="text-purple-400">{Math.round(progress)}%</span>
+              <div>
+                <label className="block text-sm font-medium mb-2">Duration</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {REEL_DURATIONS.map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setConcept({ ...concept, duration: d })}
+                      className={`py-3 rounded-xl font-medium transition-all ${
+                        concept.duration === d
+                          ? 'bg-purple-500 text-white'
+                          : 'bg-white/5 text-white/60 hover:bg-white/10'
+                      }`}
+                    >
+                      {d}s
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Tone</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['educational', 'casual', 'professional', 'entertaining'] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setConcept({ ...concept, tone: t })}
+                      className={`py-3 rounded-xl font-medium capitalize transition-all ${
+                        concept.tone === t
+                          ? 'bg-purple-500 text-white'
+                          : 'bg-white/5 text-white/60 hover:bg-white/10'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Target Audience (optional)</label>
+                <input
+                  type="text"
+                  value={concept.targetAudience || ''}
+                  onChange={(e) => setConcept({ ...concept, targetAudience: e.target.value })}
+                  placeholder="e.g., Beginners interested in finance"
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+
+              <button
+                onClick={generateScript}
+                disabled={!concept.topic.trim() || loading}
+                className="w-full py-4 rounded-xl font-medium bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5" />
+                    Generate Script with AI
+                  </>
+                )}
+              </button>
+
+              {error && (
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">
+                  {error}
+                </div>
+              )}
+
+              {script && (
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-purple-400">Generated Script</span>
+                    <button
+                      onClick={() => setScript(null)}
+                      className="text-xs text-white/40 hover:text-white"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <p className="text-white/80 whitespace-pre-wrap text-sm leading-relaxed">{script}</p>
+                </div>
+              )}
             </div>
-            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
           </div>
+        )}
 
-          {/* Steps */}
-          <nav className="flex-1 overflow-auto p-2">
-            {STEPS.map((step, index) => {
-              const isActive = step.id === currentStep;
-              const isCompleted = index < stepIndex;
-              const Icon = step.icon;
-
-              return (
+        {step === 'voice' && (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">Choose a Voice</h1>
+              <p className="text-white/60">Select the voice for your reel narration.</p>
+            </div>
+            <div className="grid gap-3">
+              {ELEVENLABS_VOICES.map((v) => (
                 <button
-                  key={step.id}
-                  onClick={() => setCurrentStep(step.id)}
-                  className={`w-full text-left p-3 rounded-lg mb-1 transition-all flex items-center gap-3 ${
-                    isActive
-                      ? 'bg-purple-500/20 text-purple-300'
-                      : isCompleted
-                      ? 'text-white/80 hover:bg-white/5'
-                      : 'text-white/40 hover:bg-white/5'
+                  key={v.id}
+                  onClick={() => setVoiceId(v.id)}
+                  className={`p-4 rounded-xl text-left transition-all flex items-center justify-between ${
+                    voiceId === v.id
+                      ? 'bg-purple-500/20 border-2 border-purple-500'
+                      : 'bg-white/5 border-2 border-transparent hover:bg-white/10'
                   }`}
                 >
-                  <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      isActive
-                        ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white'
-                        : isCompleted
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-white/10'
+                  <div>
+                    <div className="font-semibold text-lg">{v.name}</div>
+                    <div className="text-sm text-white/60 capitalize">{v.gender} • {v.style}</div>
+                  </div>
+                  <Volume2 className="w-5 h-5 text-white/40" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 'avatar' && (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">Avatar Settings</h1>
+              <p className="text-white/60">Choose between face or faceless style.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id: 'faceless', label: 'Faceless', emoji: '🎨', desc: 'Animated visuals + B-roll' },
+                { id: 'face', label: 'With Face', emoji: '👤', desc: 'AI avatar or your own' },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setAvatarMode(m.id as AvatarMode)}
+                  className={`p-6 rounded-xl text-center transition-all ${
+                    avatarMode === m.id
+                      ? 'bg-purple-500/20 border-2 border-purple-500'
+                      : 'bg-white/5 border-2 border-transparent hover:bg-white/10'
+                  }`}
+                >
+                  <div className="text-4xl mb-2">{m.emoji}</div>
+                  <div className="font-semibold">{m.label}</div>
+                  <div className="text-xs text-white/60 mt-1">{m.desc}</div>
+                </button>
+              ))}
+            </div>
+            {avatarMode === 'face' && (
+              <div>
+                <label className="block text-sm font-medium mb-3">Avatar Position</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'corner_br', label: 'Bottom Right', emoji: '↘️' },
+                    { id: 'corner_bl', label: 'Bottom Left', emoji: '↙️' },
+                    { id: 'bottom_third', label: 'Bottom', emoji: '⬇️' },
+                    { id: 'corner_tr', label: 'Top Right', emoji: '↗️' },
+                    { id: 'corner_tl', label: 'Top Left', emoji: '↖️' },
+                    { id: 'full', label: 'Full Screen', emoji: '🖼️' },
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setAvatarPosition(p.id)}
+                      className={`p-3 rounded-xl text-center transition-all ${
+                        avatarPosition === p.id
+                          ? 'bg-purple-500/20 border-2 border-purple-500'
+                          : 'bg-white/5 border-2 border-transparent hover:bg-white/10'
+                      }`}
+                    >
+                      <div className="text-xl mb-1">{p.emoji}</div>
+                      <div className="text-xs text-white/70">{p.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {step === 'style' && (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">Visual Style</h1>
+              <p className="text-white/60">Choose the look and feel of your reel.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-3">Style Preset</label>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(STYLE_PRESETS) as ReelStyle[]).map((s) => {
+                  const p = STYLE_PRESETS[s];
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setVisualStyle(s)}
+                      className={`p-3 rounded-xl text-center transition-all ${
+                        visualStyle === s
+                          ? 'ring-2 ring-purple-500'
+                          : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <div
+                        className="h-12 rounded-lg mb-2"
+                        style={{ background: `linear-gradient(135deg, ${p.primaryColor}, ${p.secondaryColor})` }}
+                      />
+                      <div className="text-xs capitalize text-white/80">{s.replace('_', ' ')}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-3">Caption Style</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'tiktok_bounce', label: 'TikTok Bounce', emoji: '⬆️' },
+                  { id: 'highlight_word', label: 'Highlight', emoji: '🟡' },
+                  { id: 'karaoke', label: 'Karaoke', emoji: '🎤' },
+                  { id: 'subtitle_classic', label: 'Classic', emoji: '📝' },
+                ].map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setCaptionStyle(c.id as CaptionStyle)}
+                    className={`p-4 rounded-xl text-center transition-all ${
+                      captionStyle === c.id
+                        ? 'bg-purple-500/20 border-2 border-purple-500'
+                        : 'bg-white/5 border-2 border-transparent hover:bg-white/10'
                     }`}
                   >
-                    {isCompleted ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
-                  </div>
-                  <span className="font-medium">{step.title}</span>
-                </button>
-              );
-            })}
-          </nav>
+                    <div className="text-2xl mb-1">{c.emoji}</div>
+                    <div className="text-sm">{c.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
-          {/* Actions */}
-          <div className="p-4 border-t border-white/10">
-            <button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2">
+        {step === 'preview' && (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">Preview & Generate</h1>
+              <p className="text-white/60">Review your settings and generate your reel.</p>
+            </div>
+            <div className="p-6 rounded-xl bg-white/5 border border-white/10 space-y-4">
+              <h3 className="font-semibold text-lg">Summary</h3>
+              <div className="space-y-3 text-sm">
+                {[
+                  ['Topic', concept.topic || '—'],
+                  ['Duration', `${concept.duration} seconds`],
+                  ['Tone', concept.tone],
+                  ['Voice', ELEVENLABS_VOICES.find((v) => v.id === voiceId)?.name || voiceId],
+                  ['Avatar', avatarMode === 'faceless' ? 'Faceless' : `Face (${avatarPosition})`],
+                  ['Style', visualStyle.replace('_', ' ')],
+                  ['Captions', captionStyle.replace('_', ' ')],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between">
+                    <span className="text-white/60">{k}</span>
+                    <span className="capitalize">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-6 rounded-xl bg-green-500/10 border border-green-500/20 text-center">
+              <Check className="w-12 h-12 text-green-400 mx-auto mb-3" />
+              <h3 className="font-semibold text-green-400 text-lg">Ready to Generate!</h3>
+              <p className="text-sm text-white/60 mt-1">Click below to create your reel.</p>
+            </div>
+            <button className="w-full py-4 rounded-xl font-medium bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2">
               <Download className="w-5 h-5" />
               Generate Reel
             </button>
           </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 lg:ml-72">
-          {/* Desktop Top Bar */}
-          <header className="hidden lg:flex h-16 border-b border-white/10 px-6 items-center justify-between sticky top-0 bg-slate-900/95 backdrop-blur z-10">
-            <h1 className="text-lg font-semibold text-white">Create New Reel</h1>
-            <div className="flex items-center gap-2 text-sm text-white/60">
-              <Clock className="w-4 h-4" />
-              <span>{concept.duration || 60}s • ~{estimateWordCount(concept.duration || 60)} words</span>
-            </div>
-          </header>
-
-          {/* Content */}
-          <div className="p-4 sm:p-6 lg:p-8 pb-32 lg:pb-8">
-            {/* Concept Step */}
-            {currentStep === 'concept' && (
-              <ConceptStep
-                concept={concept}
-                onChange={setConcept}
-                generatedScript={generatedScript}
-                isGenerating={isGeneratingScript}
-                onGenerate={generateScript}
-              />
-            )}
-
-            {/* Voice Step */}
-            {currentStep === 'voice' && (
-              <VoiceStep voiceId={voiceId} onChange={setVoiceId} />
-            )}
-
-            {/* Avatar Step */}
-            {currentStep === 'avatar' && (
-              <AvatarStep
-                mode={avatarMode}
-                position={avatarPosition}
-                onModeChange={setAvatarMode}
-                onPositionChange={setAvatarPosition}
-              />
-            )}
-
-            {/* Style Step */}
-            {currentStep === 'style' && (
-              <StyleStep
-                style={visualStyle}
-                captionStyle={captionStyle}
-                onStyleChange={setVisualStyle}
-                onCaptionStyleChange={setCaptionStyle}
-              />
-            )}
-
-            {/* Preview Step */}
-            {currentStep === 'preview' && <PreviewStep />}
-          </div>
-
-          {/* Mobile Bottom Navigation */}
-          <footer className="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-white/10 p-4">
-            <div className="flex items-center justify-between gap-4">
-              <button
-                onClick={goPrev}
-                disabled={stepIndex === 0}
-                className="flex items-center gap-2 text-white/60 hover:text-white disabled:text-white/20 disabled:cursor-not-allowed transition-colors px-4 py-2"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span className="hidden sm:inline">Previous</span>
-              </button>
-              <button
-                onClick={goNext}
-                disabled={stepIndex === STEPS.length - 1}
-                className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 text-white px-6 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2"
-              >
-                {stepIndex === STEPS.length - 1 ? 'Generate' : 'Next'}
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
-          </footer>
-
-          {/* Desktop Bottom Navigation */}
-          <footer className="hidden lg:flex h-20 border-t border-white/10 px-8 items-center justify-between">
-            <button
-              onClick={goPrev}
-              disabled={stepIndex === 0}
-              className="flex items-center gap-2 text-white/60 hover:text-white disabled:text-white/20 disabled:cursor-not-allowed transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Previous
-            </button>
-            <button
-              onClick={goNext}
-              disabled={stepIndex === STEPS.length - 1}
-              className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-medium transition-all"
-            >
-              {stepIndex === STEPS.length - 1 ? 'Generate' : 'Next'}
-              <ArrowRight className="w-5 h-5" />
-            </button>
-          </footer>
-        </main>
-      </div>
-    </div>
-  );
-}
-
-// Step Components
-function ConceptStep({
-  concept,
-  onChange,
-  generatedScript,
-  isGenerating,
-  onGenerate,
-}: {
-  concept: Concept;
-  onChange: (c: Concept) => void;
-  generatedScript: string | null;
-  isGenerating: boolean;
-  onGenerate: () => void;
-}) {
-  return (
-    <div className="max-w-2xl animate-fade-in">
-      <h2 className="text-xl sm:text-2xl font-bold mb-2 text-white">What do you want to teach?</h2>
-      <p className="text-white/60 mb-6 sm:mb-8 text-sm sm:text-base">
-        Enter your concept and AI will generate a viral-ready script.
-      </p>
-
-      <div className="space-y-5 sm:space-y-6">
-        {/* Topic */}
-        <div>
-          <label className="block text-sm font-medium mb-2 text-white">Topic / Concept</label>
-          <input
-            type="text"
-            value={concept.topic}
-            onChange={(e) => onChange({ ...concept, topic: e.target.value })}
-            placeholder="e.g., Why compound interest is the 8th wonder"
-            className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/40 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-colors text-base"
-          />
-        </div>
-
-        {/* Duration */}
-        <div>
-          <label className="block text-sm font-medium mb-2 text-white">Duration</label>
-          <div className="grid grid-cols-4 gap-2 sm:gap-3">
-            {REEL_DURATIONS.map((d) => (
-              <button
-                key={d}
-                onClick={() => onChange({ ...concept, duration: d })}
-                className={`py-3 rounded-xl border-2 font-medium transition-all text-sm sm:text-base ${
-                  concept.duration === d
-                    ? 'border-purple-500 bg-purple-500/20 text-purple-300'
-                    : 'border-white/10 text-white/70 hover:border-white/20'
-                }`}
-              >
-                {d}s
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tone */}
-        <div>
-          <label className="block text-sm font-medium mb-2 text-white">Tone</label>
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            {(['educational', 'casual', 'professional', 'entertaining'] as const).map((tone) => (
-              <button
-                key={tone}
-                onClick={() => onChange({ ...concept, tone })}
-                className={`py-3 rounded-xl border-2 font-medium capitalize transition-all text-sm sm:text-base ${
-                  concept.tone === tone
-                    ? 'border-purple-500 bg-purple-500/20 text-purple-300'
-                    : 'border-white/10 text-white/70 hover:border-white/20'
-                }`}
-              >
-                {tone}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Target Audience */}
-        <div>
-          <label className="block text-sm font-medium mb-2 text-white">Target Audience (optional)</label>
-          <input
-            type="text"
-            value={concept.targetAudience || ''}
-            onChange={(e) => onChange({ ...concept, targetAudience: e.target.value })}
-            placeholder="e.g., Beginners interested in finance"
-            className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/40 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-colors text-base"
-          />
-        </div>
-
-        {/* Generate Script Button */}
-        <button
-          onClick={onGenerate}
-          disabled={!concept.topic || isGenerating}
-          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 text-white py-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2"
-        >
-          {isGenerating ? (
-            <>
-              <RefreshCw className="w-5 h-5 animate-spin" />
-              Generating Script...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-5 h-5" />
-              Generate Script with AI
-            </>
-          )}
-        </button>
-
-        {/* Generated Script Preview */}
-        {generatedScript && (
-          <div className="bg-slate-800/50 border border-white/10 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-purple-400">Generated Script</span>
-              <button className="text-sm text-white/60 hover:text-white">Edit</button>
-            </div>
-            <p className="text-white/80 whitespace-pre-wrap text-sm sm:text-base">{generatedScript}</p>
-          </div>
         )}
-      </div>
-    </div>
-  );
-}
+      </main>
 
-function VoiceStep({
-  voiceId,
-  onChange,
-}: {
-  voiceId: string;
-  onChange: (id: string) => void;
-}) {
-  return (
-    <div className="max-w-2xl animate-fade-in">
-      <h2 className="text-xl sm:text-2xl font-bold mb-2 text-white">Choose a Voice</h2>
-      <p className="text-white/60 mb-6 sm:mb-8 text-sm sm:text-base">Select the voice for your reel narration.</p>
-
-      <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-        {ELEVENLABS_VOICES.map((voice) => (
+      {/* Footer Nav */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-[#0f172a]/95 backdrop-blur border-t border-white/10 p-4">
+        <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
           <button
-            key={voice.id}
-            onClick={() => onChange(voice.id)}
-            className={`p-4 rounded-xl border-2 text-left transition-all ${
-              voiceId === voice.id
-                ? 'border-purple-500 bg-purple-500/10'
-                : 'border-white/10 hover:border-white/20'
-            }`}
+            onClick={prev}
+            disabled={stepIdx === 0}
+            className="px-4 py-2 text-white/60 hover:text-white disabled:text-white/20 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold text-lg text-white">{voice.name}</span>
-              <button
-                onClick={(e) => e.stopPropagation()}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <Volume2 className="w-4 h-4 text-white/60" />
-              </button>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-white/60">
-              <span className="capitalize">{voice.gender}</span>
-              <span>•</span>
-              <span className="capitalize">{voice.style}</span>
-            </div>
+            <ArrowLeft className="w-5 h-5" />
+            <span className="hidden sm:inline">Previous</span>
           </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AvatarStep({
-  mode,
-  position,
-  onModeChange,
-  onPositionChange,
-}: {
-  mode: AvatarMode;
-  position: string;
-  onModeChange: (m: AvatarMode) => void;
-  onPositionChange: (p: string) => void;
-}) {
-  return (
-    <div className="max-w-2xl animate-fade-in">
-      <h2 className="text-xl sm:text-2xl font-bold mb-2 text-white">Avatar Settings</h2>
-      <p className="text-white/60 mb-6 sm:mb-8 text-sm sm:text-base">Choose between face or faceless style.</p>
-
-      {/* Mode Selection */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <button
-          onClick={() => onModeChange('faceless')}
-          className={`p-4 sm:p-6 rounded-xl border-2 text-center transition-all ${
-            mode === 'faceless'
-              ? 'border-purple-500 bg-purple-500/10'
-              : 'border-white/10 hover:border-white/20'
-          }`}
-        >
-          <div className="text-3xl sm:text-4xl mb-2 sm:mb-3">🎨</div>
-          <div className="font-semibold mb-1 text-white text-sm sm:text-base">Faceless</div>
-          <div className="text-xs sm:text-sm text-white/60">Animated visuals + B-roll</div>
-        </button>
-        <button
-          onClick={() => onModeChange('face')}
-          className={`p-4 sm:p-6 rounded-xl border-2 text-center transition-all ${
-            mode === 'face'
-              ? 'border-purple-500 bg-purple-500/10'
-              : 'border-white/10 hover:border-white/20'
-          }`}
-        >
-          <div className="text-3xl sm:text-4xl mb-2 sm:mb-3">👤</div>
-          <div className="font-semibold mb-1 text-white text-sm sm:text-base">With Face</div>
-          <div className="text-xs sm:text-sm text-white/60">AI avatar or your own</div>
-        </button>
-      </div>
-
-      {/* Position (for face mode) */}
-      {mode === 'face' && (
-        <div>
-          <label className="block text-sm font-medium mb-3 text-white">Avatar Position</label>
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {[
-              { id: 'corner_br', label: 'Corner BR', emoji: '↘️' },
-              { id: 'corner_bl', label: 'Corner BL', emoji: '↙️' },
-              { id: 'bottom_third', label: 'Bottom', emoji: '⬇️' },
-              { id: 'corner_tr', label: 'Corner TR', emoji: '↗️' },
-              { id: 'corner_tl', label: 'Corner TL', emoji: '↖️' },
-              { id: 'full', label: 'Full', emoji: '🖼️' },
-            ].map((pos) => (
-              <button
-                key={pos.id}
-                onClick={() => onPositionChange(pos.id)}
-                className={`p-3 rounded-xl border-2 text-center transition-all ${
-                  position === pos.id
-                    ? 'border-purple-500 bg-purple-500/10'
-                    : 'border-white/10 hover:border-white/20'
-                }`}
-              >
-                <div className="text-xl mb-1">{pos.emoji}</div>
-                <div className="text-xs text-white/70">{pos.label}</div>
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={next}
+            disabled={stepIdx === STEPS.length - 1}
+            className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-medium bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          >
+            {stepIdx === STEPS.length - 1 ? 'Generate' : 'Next'}
+            <ArrowRight className="w-5 h-5" />
+          </button>
         </div>
-      )}
-    </div>
-  );
-}
-
-function StyleStep({
-  style,
-  captionStyle,
-  onStyleChange,
-  onCaptionStyleChange,
-}: {
-  style: ReelStyle;
-  captionStyle: CaptionStyle;
-  onStyleChange: (s: ReelStyle) => void;
-  onCaptionStyleChange: (c: CaptionStyle) => void;
-}) {
-  return (
-    <div className="max-w-2xl animate-fade-in">
-      <h2 className="text-xl sm:text-2xl font-bold mb-2 text-white">Visual Style</h2>
-      <p className="text-white/60 mb-6 sm:mb-8 text-sm sm:text-base">Choose the look and feel of your reel.</p>
-
-      {/* Style Presets */}
-      <div className="mb-6 sm:mb-8">
-        <label className="block text-sm font-medium mb-3 text-white">Style Preset</label>
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          {(Object.keys(STYLE_PRESETS) as ReelStyle[]).map((s) => {
-            const preset = STYLE_PRESETS[s];
-            return (
-              <button
-                key={s}
-                onClick={() => onStyleChange(s)}
-                className={`p-3 sm:p-4 rounded-xl border-2 text-center transition-all ${
-                  style === s
-                    ? 'border-purple-500'
-                    : 'border-white/10 hover:border-white/20'
-                }`}
-              >
-                <div
-                  className="w-full h-10 sm:h-12 rounded-lg mb-2"
-                  style={{
-                    background: `linear-gradient(135deg, ${preset.primaryColor}, ${preset.secondaryColor})`,
-                  }}
-                />
-                <div className="text-xs sm:text-sm capitalize text-white/80">{s.replace('_', ' ')}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Caption Style */}
-      <div>
-        <label className="block text-sm font-medium mb-3 text-white">Caption Style</label>
-        <div className="grid grid-cols-2 gap-2 sm:gap-3">
-          {[
-            { id: 'tiktok_bounce', label: 'TikTok Bounce', emoji: '⬆️' },
-            { id: 'highlight_word', label: 'Highlight', emoji: '🟡' },
-            { id: 'karaoke', label: 'Karaoke', emoji: '🎤' },
-            { id: 'subtitle_classic', label: 'Classic', emoji: '📝' },
-          ].map((cap) => (
-            <button
-              key={cap.id}
-              onClick={() => onCaptionStyleChange(cap.id as CaptionStyle)}
-              className={`p-3 sm:p-4 rounded-xl border-2 text-center transition-all ${
-                captionStyle === cap.id
-                  ? 'border-purple-500 bg-purple-500/10'
-                  : 'border-white/10 hover:border-white/20'
-              }`}
-            >
-              <div className="text-xl sm:text-2xl mb-1">{cap.emoji}</div>
-              <div className="text-xs sm:text-sm text-white/80">{cap.label}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PreviewStep() {
-  return (
-    <div className="max-w-2xl animate-fade-in">
-      <h2 className="text-xl sm:text-2xl font-bold mb-2 text-white">Preview & Generate</h2>
-      <p className="text-white/60 mb-6 sm:mb-8 text-sm sm:text-base">Review your settings and generate your reel.</p>
-
-      <div className="bg-slate-800/50 border border-white/10 rounded-xl p-4 sm:p-6 mb-6">
-        <h3 className="font-semibold mb-4 text-white">Summary</h3>
-        <div className="space-y-3 text-sm">
-          <div className="flex justify-between">
-            <span className="text-white/60">Duration</span>
-            <span className="text-white">60 seconds</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-white/60">Voice</span>
-            <span className="text-white">Sarah (Energetic)</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-white/60">Avatar</span>
-            <span className="text-white">Faceless</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-white/60">Style</span>
-            <span className="text-white">Modern Minimal</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-white/60">Captions</span>
-            <span className="text-white">TikTok Bounce</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 sm:p-6 text-center">
-        <Check className="w-10 sm:w-12 h-10 sm:h-12 text-green-400 mx-auto mb-3" />
-        <h3 className="font-semibold text-green-400 mb-1">Ready to Generate!</h3>
-        <p className="text-sm text-white/60">Click the button below to create your reel.</p>
-      </div>
+      </footer>
     </div>
   );
 }

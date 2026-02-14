@@ -2,35 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 255, 255, 255;
-  --background-rgb: 15, 23, 42;
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
+  color: #fff;
+  background: #0f172a;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Form elements - ensure dark theme */
+/* Form elements - force dark theme */
 input,
 textarea,
-select,
-button {
+select {
   color: inherit;
-  background-color: transparent;
+  background: transparent;
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+  color: rgba(255, 255, 255, 0.3);
 }
 
 /* Custom scrollbar */
@@ -48,32 +46,23 @@ textarea::placeholder {
   border-radius: 3px;
 }
 
-/* Focus styles */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Focus ring */
 *:focus-visible {
   outline: 2px solid #a855f7;
   outline-offset: 2px;
 }
 
 /* Animations */
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
+@keyframes spin {
   to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: rotate(360deg);
   }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
-}
-
-/* Gradient text */
-.gradient-text {
-  background: linear-gradient(135deg, #a855f7, #ec4899);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
