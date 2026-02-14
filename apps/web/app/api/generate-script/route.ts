@@ -49,30 +49,10 @@ export async function POST(request: Request) {
       reasoning: { effort: 'medium' },
     });
 
-    const content = typeof response.output === 'string' 
-      ? response.output 
-      : JSON.stringify(response.output);
-
-    // Parse the JSON response
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const script = JSON.parse(jsonMatch[0]);
-        return NextResponse.json({ script });
-      }
-    } catch {
-      // If JSON parsing fails, return raw content as fullScript
-    }
-
-    return NextResponse.json({
-      script: {
-        hook: '',
-        content: [],
-        callToAction: '',
-        fullScript: content,
-        estimatedDuration: concept.duration,
-      },
-    });
+    // Parse the gpt-5.2 response structure
+    const script = parseGpt52Response(response, concept.duration);
+    
+    return NextResponse.json({ script });
   } catch (error) {
     console.error('Generate script error:', error);
     return NextResponse.json(
@@ -80,6 +60,91 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+// Parse the gpt-5.2 Responses API output structure
+function parseGpt52Response(response: any, duration: number) {
+  try {
+    // response.output is an array with reasoning and message objects
+    const output = response.output;
+    
+    // Handle array format from Responses API
+    if (Array.isArray(output)) {
+      // Find the message object
+      const messageObj = output.find((item: any) => item.type === 'message');
+      if (messageObj?.content?.[0]?.text) {
+        const text = messageObj.content[0].text;
+        return extractJsonFromText(text, duration);
+      }
+    }
+    
+    // Handle string output
+    if (typeof output === 'string') {
+      return extractJsonFromText(output, duration);
+    }
+    
+    // Handle direct object output
+    if (typeof output === 'object' && output !== null) {
+      if (output.fullScript || output.hook) {
+        return output;
+      }
+    }
+
+    // Fallback
+    return {
+      hook: '',
+      content: [],
+      callToAction: '',
+      fullScript: typeof output === 'string' ? output : JSON.stringify(output),
+      estimatedDuration: duration,
+    };
+  } catch (error) {
+    console.error('Error parsing response:', error);
+    return {
+      hook: '',
+      content: [],
+      callToAction: '',
+      fullScript: 'Error parsing response',
+      estimatedDuration: duration,
+    };
+  }
+}
+
+// Extract JSON from text that might have markdown code blocks
+function extractJsonFromText(text: string, duration: number) {
+  // Remove markdown code blocks
+  let cleaned = text
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
+  
+  // Try to find and parse JSON object
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        hook: parsed.hook || '',
+        setup: parsed.setup || '',
+        content: parsed.content || [],
+        callToAction: parsed.callToAction || '',
+        fullScript: parsed.fullScript || '',
+        estimatedDuration: parsed.estimatedDuration || duration,
+        hooks_used: parsed.hooks_used || [],
+      };
+    } catch {
+      // JSON parse failed
+    }
+  }
+  
+  // Return raw text as fallback
+  return {
+    hook: '',
+    content: [],
+    callToAction: '',
+    fullScript: cleaned,
+    estimatedDuration: duration,
+  };
 }
 
 const SYSTEM_PROMPT = `You are an elite viral content strategist who has studied thousands of top-performing educational reels on TikTok, Instagram, and YouTube Shorts.
@@ -131,7 +196,9 @@ PACING (for voiceover):
 - Speed up slightly during value dumps
 - Slow down for the payoff
 
-Always output valid JSON. The fullScript should read naturally when spoken aloud - no stage directions, just pure spoken words.`;
+CRITICAL: Output ONLY valid JSON with no markdown formatting. No \`\`\`json blocks. Just the raw JSON object.
+
+The fullScript should read naturally when spoken aloud - no stage directions, just pure spoken words.`;
 
 function generateMockScript(concept: z.infer<typeof ConceptSchema>) {
   const topic = concept.topic || 'this amazing topic';
@@ -183,14 +250,8 @@ REQUIREMENTS:
 4. End with a CTA that feels natural, not desperate
 5. The script should feel like advice from a smart friend, not a lecture
 
-HOOK STYLES TO CONSIDER:
-- "Nobody talks about this, but..."
-- "I was today years old when I learned..."
-- "POV: You finally understand [topic]"
-- "The [topic] advice that actually works:"
-- "Why does nobody teach this in school?"
+IMPORTANT: Return ONLY a raw JSON object. No markdown code blocks. No \`\`\`json. Just the JSON.
 
-Output as JSON:
 {
   "hook": "The scroll-stopping opening line (first 3 seconds)",
   "setup": "The stakes/context that makes them care (next 5-7 seconds)",
