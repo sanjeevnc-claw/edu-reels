@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { auth } from '@clerk/nextjs/server';
 import OpenAI from 'openai';
-
-const AUTH_COOKIE = 'edu-reels-auth';
 
 export async function POST(request: Request) {
   try {
-    // Check authentication
-    const cookieStore = cookies();
-    const authCookie = cookieStore.get(AUTH_COOKIE);
+    // Check authentication with Clerk
+    const { userId } = await auth();
     
-    if (authCookie?.value !== 'authenticated') {
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

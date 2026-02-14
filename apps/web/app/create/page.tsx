@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
+import { UserButton } from '@clerk/nextjs';
 import {
   REEL_DURATIONS,
   ELEVENLABS_VOICES,
@@ -141,9 +142,12 @@ export default function CreatePage() {
               </div>
               <span className="font-semibold text-sm">EduReels</span>
             </Link>
-            <span className="text-xs text-neutral-500">
-              {concept.duration || 60}s • ~{estimateWordCount(concept.duration || 60)} words
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-neutral-500">
+                {concept.duration || 60}s • ~{estimateWordCount(concept.duration || 60)} words
+              </span>
+              <UserButton afterSignOutUrl="/" />
+            </div>
           </div>
 
           {/* Step tabs */}

@@ -3,6 +3,13 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from '@clerk/nextjs';
 import { ArrowRight, Zap, Mic, Film } from 'lucide-react';
 
 export default function Home() {
@@ -17,9 +24,22 @@ export default function Home() {
             </div>
             <span className="font-semibold text-sm">EduReels</span>
           </div>
-          <Button size="sm" asChild>
-            <Link href="/create">Create Reel</Link>
-          </Button>
+          <div className="flex items-center gap-3">
+            <SignedOut>
+              <SignInButton mode="modal">
+                <Button variant="ghost" size="sm">Sign In</Button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <Button size="sm">Get Started</Button>
+              </SignUpButton>
+            </SignedOut>
+            <SignedIn>
+              <Button size="sm" asChild>
+                <Link href="/create">Create Reel</Link>
+              </Button>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
+          </div>
         </div>
       </header>
 
@@ -40,12 +60,22 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button asChild>
-              <Link href="/create" className="gap-2">
-                Start Creating
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </Button>
+            <SignedOut>
+              <SignUpButton mode="modal">
+                <Button className="gap-2">
+                  Start Creating
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </SignUpButton>
+            </SignedOut>
+            <SignedIn>
+              <Button asChild>
+                <Link href="/create" className="gap-2">
+                  Start Creating
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+            </SignedIn>
             <Button variant="outline">
               Watch Demo
             </Button>
