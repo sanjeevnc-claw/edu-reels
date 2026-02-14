@@ -1,0 +1,6 @@
+{
+  "installCommand": "npm i -g pnpm && pnpm install",
+  "buildCommand": "pnpm --filter @edu-reels/web build",
+  "outputDirectory": "apps/web/.next",
+  "framework": "nextjs"
+}
