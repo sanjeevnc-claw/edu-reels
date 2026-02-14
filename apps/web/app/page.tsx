@@ -10,74 +10,74 @@ export default function Home() {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="border-b border-neutral-200">
-        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-neutral-900 flex items-center justify-center">
+            <div className="w-7 h-7 rounded bg-neutral-900 flex items-center justify-center">
               <Zap className="w-4 h-4 text-white" />
             </div>
-            <span className="font-semibold text-lg">EduReels</span>
+            <span className="font-semibold text-sm">EduReels</span>
           </div>
-          <Button asChild>
+          <Button size="sm" asChild>
             <Link href="/create">Create Reel</Link>
           </Button>
         </div>
       </header>
 
       {/* Hero */}
-      <main className="max-w-4xl mx-auto px-6 py-24">
-        <div className="max-w-2xl">
-          <p className="text-sm font-medium text-neutral-500 mb-4">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-16 sm:py-24">
+        <div className="max-w-xl">
+          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-3">
             AI-Powered Educational Content
           </p>
           
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-neutral-900 mb-4">
             Turn Ideas into Viral Reels
           </h1>
           
-          <p className="text-lg text-neutral-600 mb-10 leading-relaxed">
+          <p className="text-base text-neutral-600 mb-8 leading-relaxed">
             Create engaging educational short-form videos in minutes. 
             AI generates scripts, adds voiceovers, and produces TikTok-ready content.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button size="xl" asChild>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button asChild>
               <Link href="/create" className="gap-2">
                 Start Creating
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </Button>
-            <Button variant="outline" size="xl">
+            <Button variant="outline">
               Watch Demo
             </Button>
           </div>
         </div>
 
         {/* Features */}
-        <div className="grid md:grid-cols-3 gap-6 mt-24">
+        <div className="grid sm:grid-cols-3 gap-4 mt-16">
           {[
             {
-              icon: <Zap className="w-5 h-5" />,
+              icon: <Zap className="w-4 h-4" />,
               title: 'AI Script Generation',
               desc: 'Enter a topic, get a viral-ready script with hooks, key points, and CTAs.',
             },
             {
-              icon: <Mic className="w-5 h-5" />,
+              icon: <Mic className="w-4 h-4" />,
               title: 'Natural Voiceovers',
               desc: 'Choose from multiple AI voices or use your own. ElevenLabs quality.',
             },
             {
-              icon: <Film className="w-5 h-5" />,
+              icon: <Film className="w-4 h-4" />,
               title: 'Auto Visual Styling',
               desc: 'TikTok-style captions, B-roll, and animations generated automatically.',
             },
           ].map((f) => (
-            <Card key={f.title}>
-              <CardContent className="pt-6">
-                <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center mb-4">
+            <Card key={f.title} className="border-neutral-200">
+              <CardContent className="pt-5 pb-5">
+                <div className="w-8 h-8 rounded bg-neutral-100 flex items-center justify-center mb-3">
                   {f.icon}
                 </div>
-                <h3 className="font-semibold mb-2">{f.title}</h3>
-                <p className="text-sm text-neutral-500">{f.desc}</p>
+                <h3 className="text-sm font-medium mb-1">{f.title}</h3>
+                <p className="text-xs text-neutral-500 leading-relaxed">{f.desc}</p>
               </CardContent>
             </Card>
           ))}
@@ -85,8 +85,8 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-neutral-200 py-8 mt-12">
-        <div className="max-w-4xl mx-auto px-6 text-center text-neutral-400 text-sm">
+      <footer className="border-t border-neutral-200 py-6">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center text-neutral-400 text-xs">
           Built with AI • Powered by OpenAI, ElevenLabs, and Remotion
         </div>
       </footer>

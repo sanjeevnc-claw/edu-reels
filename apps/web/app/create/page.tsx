@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import {
@@ -74,34 +74,35 @@ export default function CreatePage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-        <div className="max-w-3xl mx-auto px-6">
-          <div className="h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6">
+          {/* Top bar */}
+          <div className="h-14 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-neutral-900 flex items-center justify-center">
+              <div className="w-7 h-7 rounded bg-neutral-900 flex items-center justify-center">
                 <Zap className="w-4 h-4 text-white" />
               </div>
-              <span className="font-semibold">EduReels</span>
+              <span className="font-semibold text-sm">EduReels</span>
             </Link>
-            <span className="text-sm text-neutral-500">
+            <span className="text-xs text-neutral-500">
               {concept.duration || 60}s • ~{estimateWordCount(concept.duration || 60)} words
             </span>
           </div>
 
-          {/* Steps */}
-          <div className="pb-4 flex items-center gap-2 overflow-x-auto">
+          {/* Step tabs */}
+          <div className="flex items-center gap-1 pb-3 overflow-x-auto">
             {STEPS.map((s, i) => (
               <button
                 key={s.id}
                 onClick={() => setStep(s.id)}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
                   s.id === step && "bg-neutral-900 text-white",
-                  s.id !== step && i < stepIdx && "bg-neutral-100 text-neutral-900",
+                  s.id !== step && i < stepIdx && "bg-neutral-100 text-neutral-700",
                   s.id !== step && i >= stepIdx && "text-neutral-400 hover:text-neutral-600"
                 )}
               >
-                {i < stepIdx && <Check className="w-3.5 h-3.5" />}
+                {i < stepIdx && <Check className="w-3 h-3" />}
                 {s.label}
               </button>
             ))}
@@ -109,34 +110,34 @@ export default function CreatePage() {
         </div>
       </header>
 
-      {/* Main */}
-      <main className="max-w-xl mx-auto px-6 py-10 pb-32">
+      {/* Main content */}
+      <main className="max-w-lg mx-auto px-4 sm:px-6 py-6 pb-28">
         {step === 'concept' && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold mb-2">What do you want to teach?</h1>
-              <p className="text-neutral-500">Enter your concept and AI will generate a viral-ready script.</p>
+              <h1 className="text-xl font-semibold text-neutral-900">What do you want to teach?</h1>
+              <p className="text-sm text-neutral-500 mt-1">Enter your concept and AI will generate a viral-ready script.</p>
             </div>
 
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="topic">Topic / Concept</Label>
+            <div className="space-y-5">
+              <div className="space-y-1.5">
+                <Label htmlFor="topic" className="text-sm">Topic / Concept</Label>
                 <Input
                   id="topic"
                   value={concept.topic}
                   onChange={(e) => setConcept({ ...concept, topic: e.target.value })}
                   placeholder="e.g., Why compound interest is the 8th wonder"
-                  className="h-12"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Duration</Label>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Duration</Label>
                 <div className="grid grid-cols-4 gap-2">
                   {REEL_DURATIONS.map((d) => (
                     <Button
                       key={d}
                       type="button"
+                      size="sm"
                       variant={concept.duration === d ? "default" : "outline"}
                       onClick={() => setConcept({ ...concept, duration: d })}
                     >
@@ -146,13 +147,14 @@ export default function CreatePage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Tone</Label>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Tone</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {(['educational', 'casual', 'professional', 'entertaining'] as const).map((t) => (
                     <Button
                       key={t}
                       type="button"
+                      size="sm"
                       variant={concept.tone === t ? "default" : "outline"}
                       onClick={() => setConcept({ ...concept, tone: t })}
                       className="capitalize"
@@ -163,8 +165,8 @@ export default function CreatePage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="audience">Target Audience (optional)</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="audience" className="text-sm">Target Audience (optional)</Label>
                 <Input
                   id="audience"
                   value={concept.targetAudience || ''}
@@ -176,7 +178,7 @@ export default function CreatePage() {
               <Button
                 onClick={generateScript}
                 disabled={!concept.topic.trim() || loading}
-                className="w-full h-12"
+                className="w-full"
               >
                 {loading ? (
                   <>
@@ -189,22 +191,22 @@ export default function CreatePage() {
               </Button>
 
               {error && (
-                <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">
                   {error}
                 </div>
               )}
 
               {script && (
                 <Card>
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-2 pt-4 px-4">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">Generated Script</CardTitle>
-                      <Button variant="ghost" size="sm" onClick={() => setScript(null)}>
+                      <CardTitle className="text-sm font-medium">Generated Script</CardTitle>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setScript(null)}>
                         Clear
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="px-4 pb-4">
                     <p className="text-sm text-neutral-600 whitespace-pre-wrap leading-relaxed">{script}</p>
                   </CardContent>
                 </Card>
@@ -214,26 +216,24 @@ export default function CreatePage() {
         )}
 
         {step === 'voice' && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold mb-2">Choose a Voice</h1>
-              <p className="text-neutral-500">Select the voice for your reel narration.</p>
+              <h1 className="text-xl font-semibold text-neutral-900">Choose a Voice</h1>
+              <p className="text-sm text-neutral-500 mt-1">Select the voice for your reel narration.</p>
             </div>
-            <RadioGroup value={voiceId} onValueChange={setVoiceId} className="space-y-3">
+            <RadioGroup value={voiceId} onValueChange={setVoiceId} className="space-y-2">
               {ELEVENLABS_VOICES.map((v) => (
                 <label
                   key={v.id}
                   className={cn(
-                    "flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors",
+                    "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
                     voiceId === v.id ? "border-neutral-900 bg-neutral-50" : "border-neutral-200 hover:border-neutral-300"
                   )}
                 >
-                  <div className="flex items-center gap-3">
-                    <RadioGroupItem value={v.id} id={v.id} />
-                    <div>
-                      <div className="font-medium">{v.name}</div>
-                      <div className="text-sm text-neutral-500 capitalize">{v.gender} • {v.style}</div>
-                    </div>
+                  <RadioGroupItem value={v.id} id={v.id} />
+                  <div>
+                    <div className="text-sm font-medium">{v.name}</div>
+                    <div className="text-xs text-neutral-500 capitalize">{v.gender} • {v.style}</div>
                   </div>
                 </label>
               ))}
@@ -242,12 +242,12 @@ export default function CreatePage() {
         )}
 
         {step === 'avatar' && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold mb-2">Avatar Settings</h1>
-              <p className="text-neutral-500">Choose between face or faceless style.</p>
+              <h1 className="text-xl font-semibold text-neutral-900">Avatar Settings</h1>
+              <p className="text-sm text-neutral-500 mt-1">Choose between face or faceless style.</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {[
                 { id: 'faceless' as const, label: 'Faceless', desc: 'Animated visuals only' },
                 { id: 'face' as const, label: 'With Face', desc: 'AI avatar presenter' },
@@ -256,18 +256,18 @@ export default function CreatePage() {
                   key={m.id}
                   onClick={() => setAvatarMode(m.id)}
                   className={cn(
-                    "p-6 rounded-lg border text-left transition-colors",
+                    "p-4 rounded-lg border text-left transition-colors",
                     avatarMode === m.id ? "border-neutral-900 bg-neutral-50" : "border-neutral-200 hover:border-neutral-300"
                   )}
                 >
-                  <div className="font-medium mb-1">{m.label}</div>
-                  <div className="text-sm text-neutral-500">{m.desc}</div>
+                  <div className="text-sm font-medium">{m.label}</div>
+                  <div className="text-xs text-neutral-500 mt-0.5">{m.desc}</div>
                 </button>
               ))}
             </div>
             {avatarMode === 'face' && (
-              <div className="space-y-3">
-                <Label>Position</Label>
+              <div className="space-y-2">
+                <Label className="text-sm">Position</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { id: 'corner_br', label: 'Bottom Right' },
@@ -280,6 +280,7 @@ export default function CreatePage() {
                     <Button
                       key={p.id}
                       type="button"
+                      size="sm"
                       variant={avatarPosition === p.id ? "default" : "outline"}
                       onClick={() => setAvatarPosition(p.id)}
                       className="text-xs"
@@ -294,15 +295,15 @@ export default function CreatePage() {
         )}
 
         {step === 'style' && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold mb-2">Visual Style</h1>
-              <p className="text-neutral-500">Choose the look and feel.</p>
+              <h1 className="text-xl font-semibold text-neutral-900">Visual Style</h1>
+              <p className="text-sm text-neutral-500 mt-1">Choose the look and feel.</p>
             </div>
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label>Style Preset</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <Label className="text-sm">Style Preset</Label>
+                <div className="grid grid-cols-3 gap-2">
                   {(Object.keys(STYLE_PRESETS) as ReelStyle[]).map((s) => {
                     const p = STYLE_PRESETS[s];
                     return (
@@ -310,23 +311,23 @@ export default function CreatePage() {
                         key={s}
                         onClick={() => setVisualStyle(s)}
                         className={cn(
-                          "p-3 rounded-lg border text-center transition-colors",
+                          "p-2 rounded-lg border text-center transition-colors",
                           visualStyle === s ? "border-neutral-900" : "border-neutral-200 hover:border-neutral-300"
                         )}
                       >
                         <div 
-                          className="h-12 rounded mb-2" 
+                          className="h-10 rounded mb-1.5" 
                           style={{ background: `linear-gradient(135deg, ${p.primaryColor}, ${p.secondaryColor})` }} 
                         />
-                        <div className="text-sm capitalize">{s.replace('_', ' ')}</div>
+                        <div className="text-xs capitalize">{s.replace('_', ' ')}</div>
                       </button>
                     );
                   })}
                 </div>
               </div>
-              <div className="space-y-3">
-                <Label>Caption Style</Label>
-                <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm">Caption Style</Label>
+                <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: 'tiktok_bounce', label: 'TikTok Bounce' },
                     { id: 'highlight_word', label: 'Highlight' },
@@ -336,6 +337,7 @@ export default function CreatePage() {
                     <Button
                       key={c.id}
                       type="button"
+                      size="sm"
                       variant={captionStyle === c.id ? "default" : "outline"}
                       onClick={() => setCaptionStyle(c.id as CaptionStyle)}
                     >
@@ -349,60 +351,64 @@ export default function CreatePage() {
         )}
 
         {step === 'preview' && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold mb-2">Preview & Generate</h1>
-              <p className="text-neutral-500">Review your settings and generate.</p>
+              <h1 className="text-xl font-semibold text-neutral-900">Preview & Generate</h1>
+              <p className="text-sm text-neutral-500 mt-1">Review your settings and generate.</p>
             </div>
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Summary</CardTitle>
+              <CardHeader className="pb-0 pt-4 px-4">
+                <CardTitle className="text-sm font-medium">Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {[
-                  ['Topic', concept.topic || '—'],
-                  ['Duration', `${concept.duration}s`],
-                  ['Voice', ELEVENLABS_VOICES.find((v) => v.id === voiceId)?.name || voiceId],
-                  ['Avatar', avatarMode === 'face' ? `With Face (${avatarPosition.replace('_', ' ')})` : 'Faceless'],
-                  ['Style', visualStyle.replace('_', ' ')],
-                  ['Captions', captionStyle.replace('_', ' ')],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between py-2 border-b border-neutral-100 last:border-0">
-                    <span className="text-neutral-500">{k}</span>
-                    <span className="font-medium capitalize">{v}</span>
-                  </div>
-                ))}
+              <CardContent className="px-4 pb-4 pt-3">
+                <div className="space-y-2">
+                  {[
+                    ['Topic', concept.topic || '—'],
+                    ['Duration', `${concept.duration}s`],
+                    ['Voice', ELEVENLABS_VOICES.find((v) => v.id === voiceId)?.name || voiceId],
+                    ['Avatar', avatarMode === 'face' ? `With Face (${avatarPosition.replace('_', ' ')})` : 'Faceless'],
+                    ['Style', visualStyle.replace('_', ' ')],
+                    ['Captions', captionStyle.replace('_', ' ')],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex justify-between py-1.5 border-b border-neutral-100 last:border-0 text-sm">
+                      <span className="text-neutral-500">{k}</span>
+                      <span className="font-medium capitalize">{v}</span>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
-            <div className="p-6 rounded-lg bg-neutral-50 border border-neutral-200 text-center">
-              <Check className="w-8 h-8 mx-auto mb-2 text-neutral-900" />
-              <h3 className="font-semibold">Ready to Generate</h3>
-              <p className="text-sm text-neutral-500 mt-1">Your reel will be ready in about 2 minutes</p>
+            <div className="p-4 rounded-lg bg-neutral-50 border border-neutral-200 text-center">
+              <Check className="w-6 h-6 mx-auto mb-1.5 text-neutral-900" />
+              <h3 className="text-sm font-medium">Ready to Generate</h3>
+              <p className="text-xs text-neutral-500 mt-0.5">Your reel will be ready in about 2 minutes</p>
             </div>
-            <Button className="w-full h-12">
+            <Button className="w-full">
               Generate Reel
             </Button>
           </div>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 p-4 border-t border-neutral-200 bg-white">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-4">
+      {/* Footer navigation */}
+      <footer className="fixed bottom-0 left-0 right-0 p-3 border-t border-neutral-200 bg-white">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
           <Button
             variant="ghost"
+            size="sm"
             onClick={prev}
             disabled={stepIdx === 0}
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="w-4 h-4 mr-1" />
             Previous
           </Button>
           <Button
+            size="sm"
             onClick={next}
             disabled={stepIdx === STEPS.length - 1}
           >
             {stepIdx === STEPS.length - 1 ? 'Generate' : 'Next'}
-            {stepIdx < STEPS.length - 1 && <ArrowRight className="w-4 h-4 ml-2" />}
+            {stepIdx < STEPS.length - 1 && <ArrowRight className="w-4 h-4 ml-1" />}
           </Button>
         </div>
       </footer>
