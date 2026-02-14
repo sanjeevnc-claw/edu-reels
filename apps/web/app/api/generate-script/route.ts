@@ -23,22 +23,19 @@ export async function POST(request: Request) {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.5-preview',
         messages: [
           {
             role: 'system',
-            content: `You are an expert viral content creator specializing in educational short-form video scripts. 
-You create hook-heavy, engaging scripts optimized for TikTok, Instagram Reels, and YouTube Shorts.
-Your scripts are concise, punchy, and designed to keep viewers watching until the end.
-Always output valid JSON.`,
+            content: SYSTEM_PROMPT,
           },
           {
             role: 'user',
             content: prompt,
           },
         ],
-        temperature: 0.8,
-        max_tokens: 1000,
+        temperature: 0.85,
+        max_tokens: 1500,
       }),
     });
 
@@ -83,27 +80,81 @@ Always output valid JSON.`,
   }
 }
 
+const SYSTEM_PROMPT = `You are an elite viral content strategist who has studied thousands of top-performing educational reels on TikTok, Instagram, and YouTube Shorts.
+
+Your expertise includes:
+- Pattern interrupts that reset viewer attention every 8-10 seconds
+- Psychological hooks that exploit curiosity gaps
+- Story loops that create "I need to know what happens next" tension
+- Emotional triggers that drive shares and saves
+
+VIRAL REEL FORMULA YOU FOLLOW:
+
+**THE HOOK (0-3 seconds) - STOP THE SCROLL**
+Use one of these proven hook types:
+- Controversy: "Everyone's been doing [X] wrong..."
+- Curiosity gap: "The reason [surprising thing] will shock you"
+- Direct challenge: "You won't believe what happens when..."
+- Bold claim: "This one trick changed everything about [X]"
+- Pattern interrupt: Start mid-sentence or with unexpected visual cue
+
+**THE SETUP (3-10 seconds) - CREATE STAKES**
+- Establish why this matters RIGHT NOW
+- Create FOMO or urgency
+- Make it personal: "I used to think..." / "Before I knew this..."
+
+**THE MEAT (10-45 seconds) - DELIVER VALUE**
+- Use the "1-2-3" structure (3 punchy points max)
+- Each point should be tweetable on its own
+- Include "wait for it" moments
+- Add micro-hooks: "But here's where it gets crazy..."
+- Use contrasts: "Most people do X, but the pros do Y"
+
+**THE PAYOFF (last 5-10 seconds) - STICK THE LANDING**
+- Deliver the "aha moment"
+- Create shareability: "Tag someone who needs this"
+- Soft CTA that feels natural, not salesy
+- Open loop for next video: "Part 2 coming..."
+
+VOICE & STYLE:
+- Speak like you're telling a friend a secret, not lecturing
+- Use "you" constantly - make it about THEM
+- Short sentences. Fragments work. Like this.
+- Rhetorical questions to keep engagement
+- Power phrases: "Here's the thing", "Plot twist", "Game changer", "Real talk"
+
+PACING (for voiceover):
+- 2.5-3 words per second for clarity
+- Pause after hooks for emphasis
+- Speed up slightly during value dumps
+- Slow down for the payoff
+
+Always output valid JSON. The fullScript should read naturally when spoken aloud - no stage directions, just pure spoken words.`;
+
 function generateMockScript(concept: { topic: string; duration: number; tone: string }) {
   const topic = concept.topic || 'this amazing topic';
   const duration = concept.duration || 60;
   
   return {
-    hook: `Wait... did you know this about ${topic}? Most people get this completely wrong.`,
+    hook: `Stop scrolling. What I'm about to tell you about ${topic} is going to change everything.`,
+    setup: `I spent 3 years getting this wrong. Then I discovered something that the experts don't want you to know.`,
     content: [
-      `Here's the thing about ${topic} that nobody talks about...`,
-      `The secret is actually simpler than you think.`,
-      `Once you understand this, everything changes.`,
+      `First - forget everything you've heard about ${topic}. Most of it is outdated.`,
+      `Here's the real secret: it's not about working harder, it's about this one shift.`,
+      `The people who get this? They're miles ahead. The ones who don't? Still stuck.`,
     ],
-    callToAction: `Follow for more insights like this! Drop a 🔥 if this blew your mind.`,
-    fullScript: `Wait... did you know this about ${topic}? Most people get this completely wrong.
+    callToAction: `Save this before it gets buried. Follow for part 2 where I show you exactly how to do it.`,
+    fullScript: `Stop scrolling. What I'm about to tell you about ${topic} is going to change everything.
 
-Here's the thing that nobody talks about. The secret is actually simpler than you think.
+I spent 3 years getting this wrong. Then I discovered something that the experts don't want you to know.
 
-Most people overcomplicate ${topic}, but once you understand this core principle, everything changes.
+First - forget everything you've heard about ${topic}. Most of it is outdated.
 
-Think about it - when was the last time someone explained it this way?
+Here's the real secret: it's not about working harder, it's about this one shift in how you think about it.
 
-Follow for more insights like this! Drop a 🔥 if this blew your mind.`,
+The people who get this? They're miles ahead. The ones who don't? Still stuck in the same place wondering why nothing works.
+
+Save this before it gets buried. Follow for part 2 where I show you exactly how to do it.`,
     estimatedDuration: duration,
   };
 }
@@ -115,35 +166,42 @@ function buildPrompt(concept: {
   targetAudience?: string;
   keyPoints?: string[];
 }) {
-  const wordsPerMinute = 180; // Reels are faster paced
-  const targetWords = Math.floor((concept.duration / 60) * wordsPerMinute);
+  const wordsPerSecond = 2.7; // Optimal for reels
+  const targetWords = Math.floor(concept.duration * wordsPerSecond);
 
-  return `Create a viral educational reel script about: "${concept.topic}"
+  return `Create a viral educational reel script that will STOP THE SCROLL.
+
+TOPIC: "${concept.topic}"
+
+SPECS:
+- Duration: ${concept.duration} seconds
+- Target word count: ~${targetWords} words (at 2.7 words/sec for clear delivery)
+- Tone: ${concept.tone}
+${concept.targetAudience ? `- Target audience: ${concept.targetAudience}` : '- Target audience: General social media users interested in learning'}
+${concept.keyPoints?.length ? `- Must include these points: ${concept.keyPoints.join(', ')}` : ''}
 
 REQUIREMENTS:
-- Duration: ${concept.duration} seconds (~${targetWords} words)
-- Tone: ${concept.tone}
-${concept.targetAudience ? `- Target audience: ${concept.targetAudience}` : ''}
-${concept.keyPoints?.length ? `- Key points to cover: ${concept.keyPoints.join(', ')}` : ''}
+1. Hook must create instant curiosity - make them NEED to keep watching
+2. Include at least 2 "pattern interrupts" (unexpected transitions, rhetorical questions, "but wait" moments)
+3. Every sentence must earn its place - cut anything that doesn't add value or momentum
+4. End with a CTA that feels natural, not desperate
+5. The script should feel like advice from a smart friend, not a lecture
 
-STRUCTURE:
-1. HOOK (first 3 seconds): Start with a provocative question, surprising fact, or bold statement that stops the scroll
-2. CONTENT (middle): Deliver 2-4 key points with energy and clarity
-3. CTA (last 3-5 seconds): End with a clear call-to-action (follow, comment, share)
-
-STYLE GUIDELINES:
-- Use short, punchy sentences
-- Include pattern interrupts every 10-15 seconds
-- Make it conversational, not formal
-- Create "aha moments" that make viewers want to share
-- Use power words: "secret", "actually", "here's why", "nobody tells you"
+HOOK STYLES TO CONSIDER:
+- "Nobody talks about this, but..."
+- "I was today years old when I learned..."
+- "POV: You finally understand [topic]"
+- "The [topic] advice that actually works:"
+- "Why does nobody teach this in school?"
 
 Output as JSON:
 {
-  "hook": "Opening line (grabs attention in first 3 seconds)",
-  "content": ["Key point 1", "Key point 2", "Key point 3"],
-  "callToAction": "Ending CTA",
-  "fullScript": "Complete word-for-word script to be read aloud",
-  "estimatedDuration": ${concept.duration}
+  "hook": "The scroll-stopping opening line (first 3 seconds)",
+  "setup": "The stakes/context that makes them care (next 5-7 seconds)",
+  "content": ["Point 1 with punch", "Point 2 with insight", "Point 3 with payoff"],
+  "callToAction": "Natural ending CTA",
+  "fullScript": "The complete script as it should be read aloud - conversational, engaging, no filler",
+  "estimatedDuration": ${concept.duration},
+  "hooks_used": ["list the psychological hooks/techniques used"]
 }`;
 }
