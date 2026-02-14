@@ -1,0 +1,5 @@
+{
+  "installCommand": "cd ../.. && npm i -g pnpm@8 && pnpm install --frozen-lockfile",
+  "buildCommand": "cd ../.. && pnpm --filter @edu-reels/web build",
+  "framework": "nextjs"
+}
