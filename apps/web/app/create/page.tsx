@@ -77,13 +77,22 @@ export default function CreatePage() {
 
   const generateScript = async () => {
     setIsGeneratingScript(true);
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 2000));
-    setGeneratedScript(`Did you know that ${concept.topic}? Here's what most people get wrong...
-
-[Main content based on concept]
-
-Follow for more ${concept.tone} content!`);
+    try {
+      const res = await fetch('/api/generate-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ concept }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setGeneratedScript(data.script.fullScript || JSON.stringify(data.script, null, 2));
+      } else {
+        setGeneratedScript('Failed to generate script. Please try again.');
+      }
+    } catch (error) {
+      setGeneratedScript('Error generating script. Please try again.');
+    }
     setIsGeneratingScript(false);
   };
 
