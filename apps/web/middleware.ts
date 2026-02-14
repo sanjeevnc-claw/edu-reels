@@ -5,10 +5,10 @@ const AUTH_PASSWORD = process.env.AUTH_PASSWORD || 'edureels2024';
 const AUTH_COOKIE = 'edu-reels-auth';
 
 export function middleware(request: NextRequest) {
-  // Skip auth for login page and API routes
+  // Skip auth for login page and ALL API routes
   if (
     request.nextUrl.pathname === '/login' ||
-    request.nextUrl.pathname.startsWith('/api/auth')
+    request.nextUrl.pathname.startsWith('/api/')
   ) {
     return NextResponse.next();
   }
