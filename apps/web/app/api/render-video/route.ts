@@ -26,6 +26,16 @@ const RenderRequestSchema = z.object({
   }),
 });
 
+// Style presets
+const STYLE_COLORS: Record<string, { primary: string; accent: string }> = {
+  modern_minimal: { primary: '#0f0f23', accent: '#00ff88' },
+  bold_colorful: { primary: '#1a0a2e', accent: '#ff6b6b' },
+  dark_professional: { primary: '#0d1117', accent: '#58a6ff' },
+  bright_casual: { primary: '#fff8e7', accent: '#ff9f43' },
+  neon_tech: { primary: '#0a0a0a', accent: '#00ffff' },
+  clean_corporate: { primary: '#f8f9fa', accent: '#0066cc' },
+};
+
 export async function POST(request: Request) {
   try {
     const { userId } = await auth();
@@ -44,37 +54,44 @@ export async function POST(request: Request) {
     }
 
     const { script, voiceAudioUrl, wordTimestamps, duration, settings } = parseResult.data;
+    const colors = STYLE_COLORS[settings.visualStyle] || STYLE_COLORS.modern_minimal;
 
-    // In production, this would:
-    // 1. Queue a render job to a worker (AWS Lambda, Cloud Run, or dedicated server)
-    // 2. Return a job ID for polling
-    // 3. The worker would use @remotion/renderer to create the video
-    // 4. Upload to S3/R2 and return the URL
+    // Build render props
+    const renderProps = {
+      audioUrl: voiceAudioUrl,
+      wordTimestamps,
+      duration,
+      captionStyle: settings.captionStyle as 'tiktok_bounce' | 'highlight_word' | 'subtitle_classic',
+      primaryColor: colors.primary,
+      accentColor: colors.accent,
+    };
 
-    // For now, we'll simulate the render process
-    // In a real implementation, you'd use @remotion/renderer or @remotion/lambda
+    // Try different rendering backends in order of preference
 
-    // Check if we have Remotion Lambda configured
-    if (process.env.REMOTION_AWS_REGION && process.env.REMOTION_FUNCTION_NAME) {
-      // Use Lambda rendering
-      return await renderWithLambda({
-        script,
-        voiceAudioUrl,
-        wordTimestamps,
-        duration,
-        settings,
-        userId,
-      });
+    // 1. Remotion Lambda (AWS)
+    if (process.env.REMOTION_AWS_ACCESS_KEY_ID && process.env.REMOTION_FUNCTION_NAME) {
+      return await renderWithLambda(renderProps, userId);
     }
 
-    // Mock response for demo (no actual rendering)
-    const mockVideoUrl = generateMockVideoResponse(duration);
-    
+    // 2. Remotion Cloud (managed service)
+    if (process.env.REMOTION_CLOUD_API_KEY) {
+      return await renderWithCloud(renderProps, userId);
+    }
+
+    // 3. Self-hosted render server
+    if (process.env.RENDER_SERVER_URL) {
+      return await renderWithServer(renderProps, userId);
+    }
+
+    // 4. Demo mode - return explanation + sample video
     return NextResponse.json({
-      status: 'completed',
-      videoUrl: mockVideoUrl,
+      status: 'demo',
+      videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
       duration,
-      message: 'Video rendering is simulated. Configure Remotion Lambda for actual rendering.',
+      message: 'Video rendering requires one of: REMOTION_AWS_ACCESS_KEY_ID (Lambda), REMOTION_CLOUD_API_KEY (Cloud), or RENDER_SERVER_URL (self-hosted)',
+      script: script.fullScript,
+      wordTimestamps,
+      renderProps, // Return props so they can be used elsewhere
     });
   } catch (error) {
     console.error('Render video error:', error);
@@ -85,71 +102,81 @@ export async function POST(request: Request) {
   }
 }
 
-async function renderWithLambda(params: {
-  script: any;
-  voiceAudioUrl: string;
-  wordTimestamps: any[];
-  duration: number;
-  settings: any;
-  userId: string;
-}) {
-  // This would use @remotion/lambda/client
-  // For now, return a placeholder
+// Remotion Lambda rendering
+async function renderWithLambda(props: any, userId: string) {
+  // Dynamic import to avoid bundling issues
+  const { renderMediaOnLambda } = await import('@remotion/lambda/client');
 
-  /*
-  import { renderMediaOnLambda } from "@remotion/lambda/client";
-  
   const result = await renderMediaOnLambda({
-    region: process.env.REMOTION_AWS_REGION,
-    functionName: process.env.REMOTION_FUNCTION_NAME,
-    serveUrl: process.env.REMOTION_SERVE_URL,
-    composition: "EduReel",
-    codec: "h264",
-    inputProps: {
-      reel: {
-        script: params.script,
-        voiceAudioUrl: params.voiceAudioUrl,
-        wordTimestamps: params.wordTimestamps,
-        voiceDuration: params.duration,
-        voiceSettings: { voiceId: params.settings.voiceId },
-        avatarSettings: {
-          mode: params.settings.avatarMode,
-          position: params.settings.avatarPosition || 'corner_br',
-        },
-        visualSettings: {
-          style: params.settings.visualStyle,
-          captionStyle: params.settings.captionStyle,
-          primaryColor: '#000000',
-          secondaryColor: '#1a1a1a',
-          accentColor: '#00ff88',
-          fontTitle: 'Inter',
-          fontBody: 'Inter',
-        },
-        bRolls: [],
-      },
-      fps: 30,
-      width: 1080,
-      height: 1920,
-    },
+    region: process.env.REMOTION_AWS_REGION as any || 'us-east-1',
+    functionName: process.env.REMOTION_FUNCTION_NAME!,
+    serveUrl: process.env.REMOTION_SERVE_URL!,
+    composition: 'EduReel',
+    codec: 'h264',
+    inputProps: props,
+    outName: `reel-${userId}-${Date.now()}.mp4`,
   });
-  
+
   return NextResponse.json({
     status: 'completed',
     videoUrl: result.outputFile,
-    duration: params.duration,
-  });
-  */
-
-  return NextResponse.json({
-    status: 'completed',
-    videoUrl: 'https://example.com/rendered-video.mp4',
-    duration: params.duration,
-    message: 'Lambda rendering placeholder - configure REMOTION_* env vars',
+    duration: props.duration,
   });
 }
 
-function generateMockVideoResponse(duration: number) {
-  // Return a sample video URL for demo purposes
-  // In production, this would be the actual rendered video
-  return `https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4`;
+// Remotion Cloud rendering (managed service)
+async function renderWithCloud(props: any, userId: string) {
+  const response = await fetch('https://api.remotion.dev/render', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.REMOTION_CLOUD_API_KEY}`,
+    },
+    body: JSON.stringify({
+      composition: 'EduReel',
+      inputProps: props,
+      codec: 'h264',
+      serveUrl: process.env.REMOTION_SERVE_URL,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Remotion Cloud render failed');
+  }
+
+  const result = await response.json();
+  
+  return NextResponse.json({
+    status: 'completed',
+    videoUrl: result.outputUrl,
+    duration: props.duration,
+  });
+}
+
+// Self-hosted render server
+async function renderWithServer(props: any, userId: string) {
+  const response = await fetch(`${process.env.RENDER_SERVER_URL}/render`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.RENDER_SERVER_SECRET || ''}`,
+    },
+    body: JSON.stringify({
+      composition: 'EduReel',
+      inputProps: props,
+      userId,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Render server failed');
+  }
+
+  const result = await response.json();
+  
+  return NextResponse.json({
+    status: 'completed',
+    videoUrl: result.videoUrl,
+    duration: props.duration,
+  });
 }
