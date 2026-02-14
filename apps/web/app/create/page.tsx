@@ -30,11 +30,21 @@ const STEPS: { id: Step; label: string }[] = [
   { id: 'preview', label: 'Preview' },
 ];
 
+interface GeneratedScript {
+  hook?: string;
+  setup?: string;
+  content?: string[];
+  callToAction?: string;
+  fullScript?: string;
+  estimatedDuration?: number;
+  hooks_used?: string[];
+}
+
 export default function CreatePage() {
   const [step, setStep] = useState<Step>('concept');
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [script, setScript] = useState<string | null>(null);
+  const [script, setScript] = useState<GeneratedScript | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generationStatus, setGenerationStatus] = useState<string | null>(null);
 
@@ -64,7 +74,7 @@ export default function CreatePage() {
       });
       const data = await res.json();
       if (res.ok && data.script) {
-        setScript(data.script.fullScript || JSON.stringify(data.script, null, 2));
+        setScript(data.script);
       } else {
         setError(data.error || 'Failed to generate script');
       }
@@ -96,7 +106,7 @@ export default function CreatePage() {
         if (!scriptRes.ok) {
           throw new Error(scriptData.error || 'Failed to generate script');
         }
-        setScript(scriptData.script.fullScript || JSON.stringify(scriptData.script, null, 2));
+        setScript(scriptData.script);
       }
 
       // Step 2: Generate voiceover (simulated for now)
@@ -267,8 +277,53 @@ export default function CreatePage() {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4">
-                    <p className="text-sm text-neutral-600 whitespace-pre-wrap leading-relaxed">{script}</p>
+                  <CardContent className="px-4 pb-4 space-y-4">
+                    {script.fullScript ? (
+                      <p className="text-sm text-neutral-600 whitespace-pre-wrap leading-relaxed">
+                        {script.fullScript}
+                      </p>
+                    ) : (
+                      <>
+                        {script.hook && (
+                          <div>
+                            <p className="text-xs font-medium text-neutral-400 uppercase mb-1">Hook</p>
+                            <p className="text-sm text-neutral-900 font-medium">{script.hook}</p>
+                          </div>
+                        )}
+                        {script.setup && (
+                          <div>
+                            <p className="text-xs font-medium text-neutral-400 uppercase mb-1">Setup</p>
+                            <p className="text-sm text-neutral-600">{script.setup}</p>
+                          </div>
+                        )}
+                        {script.content && script.content.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-neutral-400 uppercase mb-1">Content</p>
+                            <ul className="text-sm text-neutral-600 space-y-2">
+                              {script.content.map((point, i) => (
+                                <li key={i} className="flex gap-2">
+                                  <span className="text-neutral-400">{i + 1}.</span>
+                                  <span>{point}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {script.callToAction && (
+                          <div>
+                            <p className="text-xs font-medium text-neutral-400 uppercase mb-1">Call to Action</p>
+                            <p className="text-sm text-neutral-600">{script.callToAction}</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {script.hooks_used && script.hooks_used.length > 0 && (
+                      <div className="pt-2 border-t border-neutral-100">
+                        <p className="text-xs text-neutral-400">
+                          Techniques: {script.hooks_used.join(', ')}
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
