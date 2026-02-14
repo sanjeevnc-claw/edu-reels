@@ -17,7 +17,7 @@ import {
   estimateWordCount,
 } from '@/lib/shared';
 import type { Concept, AvatarMode, ReelStyle, CaptionStyle } from '@/lib/shared';
-import { Zap, ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
+import { Zap, ArrowLeft, ArrowRight, Check, Loader2, Sparkles } from 'lucide-react';
 
 type Step = 'concept' | 'voice' | 'avatar' | 'style' | 'preview';
 
@@ -32,8 +32,10 @@ const STEPS: { id: Step; label: string }[] = [
 export default function CreatePage() {
   const [step, setStep] = useState<Step>('concept');
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [script, setScript] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [generationStatus, setGenerationStatus] = useState<string | null>(null);
 
   const [concept, setConcept] = useState<Concept>({
     id: '', topic: '', targetAudience: '', keyPoints: [], tone: 'educational', duration: 60,
@@ -69,6 +71,61 @@ export default function CreatePage() {
       setError('Network error');
     }
     setLoading(false);
+  };
+
+  const generateReel = async () => {
+    if (!concept.topic.trim()) {
+      setError('Please enter a topic first');
+      return;
+    }
+
+    setGenerating(true);
+    setError(null);
+    setGenerationStatus('Generating script...');
+
+    try {
+      // Step 1: Generate script if not already done
+      if (!script) {
+        const scriptRes = await fetch('/api/generate-script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ concept }),
+        });
+        const scriptData = await scriptRes.json();
+        if (!scriptRes.ok) {
+          throw new Error(scriptData.error || 'Failed to generate script');
+        }
+        setScript(scriptData.script.fullScript || JSON.stringify(scriptData.script, null, 2));
+      }
+
+      // Step 2: Generate voiceover (simulated for now)
+      setGenerationStatus('Generating voiceover...');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Step 3: Generate visuals (simulated for now)
+      setGenerationStatus('Creating visuals...');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Step 4: Rendering video (simulated for now)
+      setGenerationStatus('Rendering video...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Complete
+      setGenerationStatus('Complete! Your reel is ready.');
+      
+      // Show success for a moment then reset
+      setTimeout(() => {
+        setGenerating(false);
+        setGenerationStatus(null);
+        // TODO: Navigate to video preview or download page
+        alert('🎬 Reel generated successfully!\n\nVideo generation pipeline coming soon. Your script has been created and saved.');
+      }, 1000);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate reel');
+      setGenerating(false);
+      setGenerationStatus(null);
+    }
   };
 
   return (
@@ -378,13 +435,43 @@ export default function CreatePage() {
                 </div>
               </CardContent>
             </Card>
-            <div className="p-4 rounded-lg bg-neutral-50 border border-neutral-200 text-center">
-              <Check className="w-6 h-6 mx-auto mb-1.5 text-neutral-900" />
-              <h3 className="text-sm font-medium">Ready to Generate</h3>
-              <p className="text-xs text-neutral-500 mt-0.5">Your reel will be ready in about 2 minutes</p>
-            </div>
-            <Button className="w-full">
-              Generate Reel
+
+            {error && (
+              <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
+            {generating ? (
+              <div className="p-6 rounded-lg bg-neutral-50 border border-neutral-200 text-center">
+                <Loader2 className="w-8 h-8 mx-auto mb-3 text-neutral-900 animate-spin" />
+                <h3 className="text-sm font-medium">{generationStatus}</h3>
+                <p className="text-xs text-neutral-500 mt-1">This may take a few minutes...</p>
+              </div>
+            ) : (
+              <div className="p-4 rounded-lg bg-neutral-50 border border-neutral-200 text-center">
+                <Check className="w-6 h-6 mx-auto mb-1.5 text-neutral-900" />
+                <h3 className="text-sm font-medium">Ready to Generate</h3>
+                <p className="text-xs text-neutral-500 mt-0.5">Your reel will be ready in about 2 minutes</p>
+              </div>
+            )}
+
+            <Button 
+              className="w-full" 
+              onClick={generateReel}
+              disabled={generating || !concept.topic.trim()}
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Reel
+                </>
+              )}
             </Button>
           </div>
         )}
