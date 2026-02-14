@@ -14,11 +14,15 @@ const ConceptSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    // Check authentication with Clerk
-    const { userId } = await auth();
+    // Check authentication with Clerk (skip in dev if SKIP_AUTH=true)
+    let userId = 'dev-user';
     
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (process.env.SKIP_AUTH !== 'true') {
+      const authResult = await auth();
+      if (!authResult.userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      userId = authResult.userId;
     }
 
     // Parse and validate input

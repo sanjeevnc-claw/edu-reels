@@ -10,9 +10,14 @@ const VoiceRequestSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Skip auth in dev mode
+    let userId = 'dev-user';
+    if (process.env.SKIP_AUTH !== 'true') {
+      const authResult = await auth();
+      if (!authResult.userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      userId = authResult.userId;
     }
 
     const body = await request.json();
